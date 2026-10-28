@@ -734,7 +734,10 @@ pub struct GradStore(HashMap<TensorId, Tensor>);
 
 impl GradStore {
     /// Create a new gradient store
-    fn new() -> Self {
+    /// MAI FORK (session 28): made public — reusable empty grad stores
+    /// and arena-backed accumulation need a public constructor.
+    /// Value-neutral: visibility only.
+    pub fn new() -> Self {
         Self::default()
     }
 

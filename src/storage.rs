@@ -798,7 +798,11 @@ impl Storage {
     }
 
     // self, the source can be strided whereas dst is contiguous.
-    pub(crate) fn copy_strided_src(
+    /// MAI FORK (session 28): made public — the in-place strided device
+    /// copy primitive the arena/slab patterns (flat_g, EMA, M3 masters)
+    /// need without hand-rolled raw-pointer plumbing. Value-neutral:
+    /// visibility only.
+    pub fn copy_strided_src(
         &self,
         dst: &mut Self,
         dst_offset: usize,
