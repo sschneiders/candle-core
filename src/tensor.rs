@@ -2363,6 +2363,39 @@ impl Tensor {
             Tensor(Arc::new(tensor_))
         }
     }
+}
+
+impl Tensor {
+    /// MAI FORK (session 28): detach that KEEPS the autograd graph tracked
+    /// below this point. Like [`Tensor::detach`], the returned tensor cuts
+    /// the gradient path to `self` (op = none, so backward never expands
+    /// into `self`'s history — a block-local / segment-local boundary).
+    /// Unlike `detach`, `is_variable` stays TRUE, so ops consuming this
+    /// tensor ARE recorded and their backward RUNS: gradients reach every
+    /// non-detached parameter downstream of the boundary, while the
+    /// boundary itself stays a leaf.
+    ///
+    /// This is the semantic the block-local training arm (MAI_BLOCAL) and
+    /// the segment-local megakernel need: "no gradient crosses INTO the
+    /// prefix" without "the prefix boundary erases the rest of the graph".
+    /// Proven by fork_smoke: w2.grad present, w1.grad absent across a
+    /// detach_keep boundary.
+    pub fn detach_keep(&self) -> Tensor {
+        if self.op.is_none() && self.is_variable {
+            self.clone()
+        } else {
+            let tensor_ = Tensor_ {
+                id: TensorId::new(),
+                storage: self.storage.clone(),
+                layout: self.layout.clone(),
+                op: BackpropOp::none(),
+                is_variable: true,
+                dtype: self.dtype,
+                device: self.device.clone(),
+            };
+            Tensor(Arc::new(tensor_))
+        }
+    }
 
     /// If the target device is the same as the tensor device, only a shallow copy is performed.
     pub fn to_device(&self, device: &Device) -> Result<Tensor> {
